@@ -11,58 +11,57 @@ import pywt
 import pywt.data
 
 
-
-def visualize_coeffs(coeffs, n_levels, image_shape):
-    """
-    Plots the DWT coefficients, grouping all coefficients of each level in one figure.
-
-    Parameters:
-    - coeffs: list
-        Wavelet coefficients from dwt2d function.
-    - n_levels: int
-        Number of decomposition levels.
-    - image_shape: tuple
-        Shape of the original image for size normalization.
-    """
-    import matplotlib.pyplot as plt
-
+def visualize_coeffs(coeffs, n_levels, image_shape, max_figsize):
+    # Function to draw rectangles around subbands and add labels in individual images
     # Get the maximum shape to normalize figure sizes
     max_shape = max(image_shape)
-    max_figsize = 8  # Maximum figure size in inches
 
-    # Plot the approximation coefficients (LL) at the deepest level
-    cA = coeffs[0]
-    shape = cA.shape
-    figsize = (shape[1]/max_shape * max_figsize, shape[0]/max_shape * max_figsize)
-    plt.figure(figsize=figsize)
-    plt.imshow(cA, cmap='gray', aspect='auto')
-    plt.title(f'Deepest Level Approximation (LL) -  Level {n_levels}')
-    plt.axis('off')
-    plt.show()
+    # Now, for each coefficient array, plot it in a separate figure
+    for level, coeff in enumerate(coeffs):
+        if level == 0:
+            # Approximation coefficients at the coarsest level
+            cA = coeff
+            # Determine the figure size proportional to the array shape
+            shape = cA.shape
+            figsize = (shape[1]/max_shape * max_figsize, shape[0]/max_shape * max_figsize)  # width, height in inches
+            plt.figure(figsize=figsize)
+            plt.imshow(cA, cmap='gray', aspect='auto')
+            plt.title(f'Level {n_levels}: LL (Approximation Coefficients)')
+            plt.axis('off')
+            plt.show()
+        else:
+            # Detail coefficients at this level
+            cH, cV, cD = coeff
+            lev = n_levels - level + 1  # Adjust level numbering
+            detail_types = ['LH (Horizontal', 'HL (Vertical', 'HH (Diagonal']
+            coefficients = [cH, cV, cD]
+            for detail_type, c in zip(detail_types, coefficients):
+                shape = c.shape
+                figsize = (shape[1]/max_shape * max_figsize, shape[0]/max_shape * max_figsize)
+                plt.figure(figsize=figsize)
+                plt.imshow(c, cmap='gray', aspect='auto')
+                plt.title(f'Level {lev}: {detail_type} Detail Coefficients)')
+                plt.axis('off')
+                plt.show()
 
-    # Iterate through each level's detail coefficients from highest to lowest level
-    levels = n_levels
-    for idx, (cH, cV, cD) in enumerate(coeffs[1:], start=1):
-        # Level number from highest (1) to deepest (n_levels)
-        level = levels - idx + 1
 
-        detail_types = ['Horizontal detail (LH)', 'Vertical detail (HL)', 'Diagonal detail (HH)']
-        coefficients = [cH, cV, cD]
+def get_font_size(ax, base_size=8):
+    """
+    Calculate font size based on the dimensions of the subplot.
+    
+    Parameters:
+    - ax: The subplot axes object.
+    - base_size: A base font size for scaling.
+    
+    Returns:
+    - An integer font size adjusted based on subplot dimensions.
+    """
+    bbox = ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
+    width, height = bbox.width, bbox.height
+    # Scale font size based on the subplot width
+    font_size = base_size * (width + height) / 3  # Adjust the divisor to scale appropriately
+    return int(font_size)
 
-        # Determine the figure size proportional to the array shape
-        shape = cH.shape
-        figsize = (shape[1]/max_shape * max_figsize * 3, shape[0]/max_shape * max_figsize)
-
-        fig, axes = plt.subplots(1, 3, figsize=figsize)
-
-        for ax, detail_type, c in zip(axes, detail_types, coefficients):
-            ax.imshow(c, cmap='gray', aspect='auto')
-            ax.set_title(f'{detail_type}')
-            ax.axis('off')
-
-        plt.suptitle(f'Detail Coefficients at Level {level}')
-        plt.tight_layout()
-        plt.show()
 
 def visualize_coeffs_2D(coeffs, n_levels):
     # Function to draw rectangles around subbands and add labels on a single image
@@ -190,7 +189,7 @@ def filtering(input_image):
     plt.show()
 
 
-def create_pattern_image(save_dir='.', img_size=(512, 512), grayscale=True):
+def create_pattern_image(save_dir='.', image_width=512, image_height=512, grayscale=True):
     """
     Creates an image with various horizontal or vertical lines, checkerboard pattern, random noise, etc to evaluate image processing effects
     """
@@ -198,16 +197,16 @@ def create_pattern_image(save_dir='.', img_size=(512, 512), grayscale=True):
 
     # Create a blank white image
     if grayscale:
-        img = Image.new('L', img_size, 'white')  # 'L' mode for grayscale
+        img = Image.new('L', (image_width, image_height), 'white')  # 'L' mode for grayscale
     else:
-        img = Image.new('RGB', img_size, 'white')
+        img = Image.new('RGB', (image_width, image_height), 'white')
     draw = ImageDraw.Draw(img)
 
     # Define grid size
     rows = 3
     cols = 3
-    section_width = img_size[0] // cols
-    section_height = img_size[1] // rows
+    section_width = image_width // cols
+    section_height = image_height // rows
 
     # Adjust fill colors based on grayscale parameter
     black = 0 if grayscale else 'black'
@@ -219,10 +218,10 @@ def create_pattern_image(save_dir='.', img_size=(512, 512), grayscale=True):
     # Draw grid lines (optional)
     for i in range(1, cols):
         x = i * section_width
-        draw.line([(x, 0), (x, img_size[1])], fill=black, width=1)
+        draw.line([(x, 0), (x, image_height)], fill=black, width=1)
     for i in range(1, rows):
         y = i * section_height
-        draw.line([(0, y), (img_size[0], y)], fill=black, width=1)
+        draw.line([(0, y), (image_width, y)], fill=black, width=1)
 
     ### Section (0, 0): Horizontal lines with varying widths ###
     x0, y0 = 0, 0
