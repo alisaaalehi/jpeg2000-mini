@@ -341,3 +341,40 @@ def create_pattern_image(save_dir='.', image_width=512, image_height=512, graysc
     # img.show()
     return np.array(img)
 
+
+def count_zeros_in_coeffs(coeffs):
+    """
+    Counts the number of zeros in each sub-band and in total for a set of wavelet coefficients.
+
+    Parameters:
+    - coeffs: list
+        Wavelet coefficients from dwt2d function.
+
+    Returns:
+    - zero_counts: dict
+        Dictionary with zero counts for each sub-band and the total.
+    """
+    zero_counts = {
+        'LL': int(np.sum(coeffs[0] == 0)),  # Count zeros in the approximation coefficients
+        'LH': [],  # Horizontal detail
+        'HL': [],  # Vertical detail
+        'HH': []   # Diagonal detail
+    }
+    total_zeros = zero_counts['LL']  # Initialize total zero count with LL zeros
+
+    # Iterate through each level's detail coefficients
+    for level, (cH, cV, cD) in enumerate(coeffs[1:], start=1):
+        zeros_LH = int(np.sum(cH == 0))
+        zeros_HL = int(np.sum(cV == 0))
+        zeros_HH = int(np.sum(cD == 0))
+
+        # Add the counts to the respective lists for each sub-band
+        zero_counts['LH'].append(zeros_LH)
+        zero_counts['HL'].append(zeros_HL)
+        zero_counts['HH'].append(zeros_HH)
+
+        # Increment the total zero count
+        total_zeros += zeros_LH + zeros_HL + zeros_HH
+
+    zero_counts['total'] = total_zeros
+    return zero_counts
