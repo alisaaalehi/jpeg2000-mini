@@ -133,3 +133,212 @@ def binarize_image(gray_image, threshold=.5):
     return binary_image
 
 
+def filtering(input_image):
+    # Vertical Edge Detection Filter (detects vertical edges)
+    vertical_edge_filter = np.array([[-1, 0, 1],
+                                    [-2, 0, 2],
+                                    [-1, 0, 1]])
+
+    # Horizontal Edge Detection Filter (detects horizontal edges)
+    horizontal_edge_filter = np.array([[-1, -2, -1],
+                                    [ 0,  0,  0],
+                                    [ 1,  2,  1]])
+
+    # High-Pass Filter (Laplacian)
+    high_pass_filter = np.array([[ 0, -1,  0],
+                                [-1,  4, -1],
+                                [ 0, -1,  0]])
+
+    # Low-Pass Filter (Averaging)
+    low_pass_filter = np.ones((3, 3)) / 9
+
+    # Apply filters
+    vertical_edges = convolve(input_image, vertical_edge_filter)
+    horizontal_edges = convolve(input_image, horizontal_edge_filter)
+    high_pass = convolve(input_image, high_pass_filter)
+    low_pass = convolve(input_image, low_pass_filter)
+
+    # Visualize results
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(2, 3, 1)
+    plt.imshow(input_image, cmap='gray')
+    plt.title('Original Image')
+    plt.axis('off')
+
+    plt.subplot(2, 3, 2)
+    plt.imshow(vertical_edges, cmap='gray')
+    plt.title('Vertical Edges')
+    plt.axis('off')
+
+    plt.subplot(2, 3, 3)
+    plt.imshow(horizontal_edges, cmap='gray')
+    plt.title('Horizontal Edges')
+    plt.axis('off')
+
+    plt.subplot(2, 3, 4)
+    plt.imshow(high_pass, cmap='gray')
+    plt.title('High-Pass Filter')
+    plt.axis('off')
+
+    plt.subplot(2, 3, 5)
+    plt.imshow(low_pass, cmap='gray')
+    plt.title('Low-Pass Filter')
+    plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def create_pattern_image(save_dir='.', img_size=(512, 512), grayscale=True):
+    """
+    Creates an image with various horizontal or vertical lines, checkerboard pattern, random noise, etc to evaluate image processing effects
+    """
+    # Set this parameter to True for grayscale image, False for color
+
+    # Create a blank white image
+    if grayscale:
+        img = Image.new('L', img_size, 'white')  # 'L' mode for grayscale
+    else:
+        img = Image.new('RGB', img_size, 'white')
+    draw = ImageDraw.Draw(img)
+
+    # Define grid size
+    rows = 3
+    cols = 3
+    section_width = img_size[0] // cols
+    section_height = img_size[1] // rows
+
+    # Adjust fill colors based on grayscale parameter
+    black = 0 if grayscale else 'black'
+    white = 255 if grayscale else 'white'
+    gray = 128 if grayscale else 'gray'
+    blue = 128 if grayscale else 'blue'  # Blue will appear as gray in grayscale
+    green = 128 if grayscale else 'green'
+
+    # Draw grid lines (optional)
+    for i in range(1, cols):
+        x = i * section_width
+        draw.line([(x, 0), (x, img_size[1])], fill=black, width=1)
+    for i in range(1, rows):
+        y = i * section_height
+        draw.line([(0, y), (img_size[0], y)], fill=black, width=1)
+
+    ### Section (0, 0): Horizontal lines with varying widths ###
+    x0, y0 = 0, 0
+    num_lines = 10
+    spacing = section_height // (num_lines + 1)
+    for i in range(num_lines):
+        y = y0 + spacing * (i + 1)
+        width = (i % num_lines) + 1  # Width cycles from 1 to num_lines
+        draw.line([(x0 + 10, y), (x0 + section_width - 10, y)], fill=black, width=width)
+
+    ### Section (0, 1): Vertical lines with varying widths ###
+    x0, y0 = section_width, 0
+    num_lines = 10
+    spacing = section_width // (num_lines + 1)
+    for i in range(num_lines):
+        x = x0 + spacing * (i + 1)
+        width = (i % num_lines) + 1  # Width cycles from 1 to num_lines
+        draw.line([(x, y0 + 10), (x, y0 + section_height - 10)], fill=black, width=width)
+
+    ### Section (0, 2): Diagonal lines with varying widths ###
+    x0, y0 = 2 * section_width, 0
+    num_lines = 10
+    for i in range(num_lines):
+        offset = i * (section_width // num_lines)
+        width = (i % num_lines) + 1
+        draw.line(
+            [(x0 + offset + 10, y0 + 10), (x0 + section_width - 10, y0 + section_height - offset - 10)],
+            fill=black, width=width
+        )
+    for i in range(num_lines):
+        offset = i * (section_width // num_lines)
+        width = (i % num_lines) + 1
+        draw.line(
+            [(x0 + 10, y0 + offset + 10), (x0 + section_width - offset - 10, y0 + section_height - 10)],
+            fill=black, width=width
+        )
+
+    ### Section (1, 0): Concentric Circles ###
+    x0, y0 = 0, section_height
+    center = (x0 + section_width // 2, y0 + section_height // 2)
+    num_circles = 8
+    max_radius = min(section_width, section_height) // 2
+    radius_step = max_radius // num_circles
+    for i in range(num_circles):
+        radius = max_radius - i * radius_step
+        width = (i % num_circles) + 1
+        bbox = [
+            center[0] - radius, center[1] - radius,
+            center[0] + radius, center[1] + radius
+        ]
+        draw.ellipse(bbox, outline=black, width=width)
+
+    ### Section (1, 1): Checkerboard Pattern ###
+    x0, y0 = section_width, section_height
+    checker_size = 30
+    for x in range(x0, x0 + section_width, checker_size):
+        for y in range(y0, y0 + section_height, checker_size):
+            if ((x - x0) // checker_size + (y - y0) // checker_size) % 2 == 0:
+                draw.rectangle([x, y, x + checker_size, y + checker_size], fill=gray)
+
+    ### Section (1, 2): Repeated Sinusoidal Curves with Varying Thickness ###
+    x0, y0 = 2 * section_width, section_height
+    num_curves = 6
+    amplitude = section_height // 4
+    frequency = 2 * np.pi / (section_width // 2)
+    for i in range(num_curves):
+        x_values = np.linspace(x0, x0 + section_width, 1000)
+        y_values = y0 + section_height // 2 + amplitude * np.sin(frequency * (x_values - x0 + 2*i) + i * np.pi / num_curves)
+        points = list(zip(x_values, y_values))
+        width = (i % num_curves) + 1
+        draw.line(points, fill=blue, width=width)
+
+    ### Section (2, 0): Concentric Squares ###
+    x0, y0 = 0, 2 * section_height
+    center = (x0 + section_width // 2, y0 + section_height // 2)
+    num_squares = 8
+    max_offset = min(section_width, section_height) // 2 - 10
+    offset_step = max_offset // num_squares
+    for i in range(num_squares):
+        offset = i * offset_step
+        width = (i % num_squares) + 1
+        bbox = [
+            center[0] - max_offset + offset, center[1] - max_offset + offset,
+            center[0] + max_offset - offset, center[1] + max_offset - offset
+        ]
+        draw.rectangle(bbox, outline=green, width=width)
+
+    ### Section (2, 1): Random Noise Pattern ###
+    x0, y0 = section_width, 2 * section_height
+    if grayscale:
+        noise = np.random.randint(0, 256, (section_height, section_width), dtype=np.uint8)
+        noise_img = Image.fromarray(noise, 'L')
+    else:
+        noise = np.random.randint(0, 256, (section_height, section_width, 3), dtype=np.uint8)
+        noise_img = Image.fromarray(noise, 'RGB')
+    img.paste(noise_img, (x0, y0))
+
+    ### Section (2, 2): Radial Gradient ###
+    x0, y0 = 2 * section_width, 2 * section_height
+    for y in range(section_height):
+        for x in range(section_width):
+            dx = x - section_width // 2
+            dy = y - section_height // 2
+            distance = np.sqrt(dx**2 + dy**2)
+            intensity = int(255 * (1 - distance / (np.sqrt(2) * section_width / 2)))
+            intensity = max(0, min(255, intensity))
+            if grayscale:
+                img.putpixel((x0 + x, y0 + y), intensity)
+            else:
+                img.putpixel((x0 + x, y0 + y), (intensity, intensity, intensity))
+
+    # Save and show the image
+    if grayscale:
+        img.save(os.path.join(save_dir, 'patterns_grayscale.png'))
+    else:
+        img.save(os.path.join(save_dir, 'patterns.png'))
+    # img.show()
+    return np.array(img)
+
