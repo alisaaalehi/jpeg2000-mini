@@ -406,3 +406,58 @@ def count_zeros_in_coeffs(coeffs):
     }
 
     return zero_counts
+
+
+def visualize_reconstruction(original_image, reconstructed_image):
+    """
+    Displays the original image, reconstructed image, and enhanced difference image side by side.
+    Works for both grayscale and RGB images.
+
+    Parameters:
+    - original_image: numpy.ndarray
+        The original image (grayscale or RGB).
+    - reconstructed_image: numpy.ndarray
+        The reconstructed image (grayscale or RGB).
+    """
+    # Compute the absolute difference image
+    difference_image = np.abs(original_image.astype(np.int16) - reconstructed_image.astype(np.int16))
+    difference_image = np.clip(difference_image, 0, 255).astype(np.uint8)
+
+    # Check if the image is grayscale or RGB
+    if len(original_image.shape) == 2:  # Grayscale image
+        grayscale_difference = difference_image
+        is_grayscale = True
+    else:  # RGB image
+        # Convert the difference to grayscale by averaging across color channels for better visualization
+        grayscale_difference = np.mean(difference_image, axis=2).astype(np.uint8)
+        is_grayscale = False
+
+    # Plot the images with a colormap for the difference
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    
+    # Display the original image
+    if is_grayscale:
+        axes[0].imshow(original_image, cmap='gray')
+    else:
+        axes[0].imshow(original_image)
+    axes[0].set_title('Original Image')
+    axes[0].axis('off')
+    
+    # Display the reconstructed image
+    if is_grayscale:
+        axes[1].imshow(reconstructed_image, cmap='gray')
+    else:
+        axes[1].imshow(reconstructed_image)
+    axes[1].set_title('Reconstructed Image')
+    axes[1].axis('off')
+    
+    # Display the difference image with a colormap for grayscale difference
+    im = axes[2].imshow(grayscale_difference, cmap='hot', vmin=0, vmax=255)
+    axes[2].set_title('Difference Image')
+    axes[2].axis('off')
+    
+    # Add a colorbar to better interpret the difference scale
+    fig.colorbar(im, ax=axes[2], orientation='vertical', fraction=0.046, pad=0.04)
+    
+    plt.tight_layout()
+    plt.show()
