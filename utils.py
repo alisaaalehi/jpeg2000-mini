@@ -63,7 +63,7 @@ def get_font_size(ax, base_size=8):
     return int(font_size)
 
 
-def visualize_coeffs_2D(coeffs, n_levels):
+def visualize_coeffs_2D(coeffs, n_levels, title_suffix=""):
     # Function to draw rectangles around subbands and add labels on a single image
 
     # Convert the coefficients to a single array
@@ -72,7 +72,7 @@ def visualize_coeffs_2D(coeffs, n_levels):
     # Plot the coefficients array which is already organized in 2D proper form
     plt.figure(figsize=(8, 8))
     plt.imshow(arr, cmap='gray', extent=[0, arr.shape[1], arr.shape[0], 0])
-    plt.title('Wavelet Coefficients organized in 2D')
+    plt.title(f'Wavelet Coefficients organized in 2D {title_suffix}')
     plt.axis('off')
 
     # Draw bounding boxes around the sub-bands and add text on each sub-band
