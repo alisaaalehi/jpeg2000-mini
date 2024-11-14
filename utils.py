@@ -344,7 +344,8 @@ def create_pattern_image(save_dir='.', image_width=512, image_height=512, graysc
 
 def count_zeros_in_coeffs(coeffs):
     """
-    Counts the number of zeros in each sub-band and in total for a set of wavelet coefficients.
+    Counts the number of zeros in each sub-band and in total for a set of wavelet coefficients,
+    and also calculates the percentage of zeros.
 
     Parameters:
     - coeffs: list
@@ -352,15 +353,22 @@ def count_zeros_in_coeffs(coeffs):
 
     Returns:
     - zero_counts: dict
-        Dictionary with zero counts for each sub-band and the total.
+        Dictionary with zero counts and percentages for each sub-band and the total.
     """
     zero_counts = {
-        'LL': int(np.sum(coeffs[0] == 0)),  # Count zeros in the approximation coefficients
+        'LL': {
+            'count': int(np.sum(coeffs[0] == 0)),  # Count zeros in the approximation coefficients
+            'percentage': 0
+        },
         'LH': [],  # Horizontal detail
         'HL': [],  # Vertical detail
         'HH': []   # Diagonal detail
     }
-    total_zeros = zero_counts['LL']  # Initialize total zero count with LL zeros
+    total_zeros = zero_counts['LL']['count']  # Initialize total zero count with LL zeros
+    total_elements = coeffs[0].size  # Initialize total element count with LL size
+
+    # Calculate percentage for the LL band
+    zero_counts['LL']['percentage'] = (zero_counts['LL']['count'] / total_elements) * 100
 
     # Iterate through each level's detail coefficients
     for level, (cH, cV, cD) in enumerate(coeffs[1:], start=1):
@@ -368,13 +376,33 @@ def count_zeros_in_coeffs(coeffs):
         zeros_HL = int(np.sum(cV == 0))
         zeros_HH = int(np.sum(cD == 0))
 
-        # Add the counts to the respective lists for each sub-band
-        zero_counts['LH'].append(zeros_LH)
-        zero_counts['HL'].append(zeros_HL)
-        zero_counts['HH'].append(zeros_HH)
+        # Calculate total elements for each detail band
+        elements_LH = cH.size
+        elements_HL = cV.size
+        elements_HH = cD.size
 
-        # Increment the total zero count
+        # Add the counts and percentages to the respective lists for each sub-band
+        zero_counts['LH'].append({
+            'count': zeros_LH,
+            'percentage': (zeros_LH / elements_LH) * 100 if elements_LH else 0
+        })
+        zero_counts['HL'].append({
+            'count': zeros_HL,
+            'percentage': (zeros_HL / elements_HL) * 100 if elements_HL else 0
+        })
+        zero_counts['HH'].append({
+            'count': zeros_HH,
+            'percentage': (zeros_HH / elements_HH) * 100 if elements_HH else 0
+        })
+
+        # Increment the total zero count and total elements
         total_zeros += zeros_LH + zeros_HL + zeros_HH
+        total_elements += elements_LH + elements_HL + elements_HH
 
-    zero_counts['total'] = total_zeros
+    # Add total count and percentage
+    zero_counts['total'] = {
+        'count': total_zeros,
+        'percentage': (total_zeros / total_elements) * 100 if total_elements else 0
+    }
+
     return zero_counts
